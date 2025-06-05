@@ -59,7 +59,7 @@ void setup(){
   pinMode(LockSignal, OUTPUT);
 
   /* Button
-    DO NOT USE PUT_PULLUP, becuase:
+    DO NOT USE INPUT_PULLUP, becuase:
      - It is buggy with interrupts trigger my FALLING edge
      - The circuit already have pull-up resistor  
   */
