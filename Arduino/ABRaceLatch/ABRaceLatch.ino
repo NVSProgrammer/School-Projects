@@ -20,24 +20,24 @@ const int BButton = 3;
 // delays [ms]
 const unsigned long ErrorFlagDelay = 300;
 const unsigned long LEDDelay = 500;
-const unsigned long LockSignalDelay = 200;
+const unsigned long LockSignalDelay = 300;
 
 // Music
 const int ToneArray[] = {500, 700};
 const unsigned long ToneDelayArray[] = {100, 100};
 
-// changing varribles
+// changing varribles-----------
 // bool
 bool error = false;
 bool Locked = false;
 bool SoundPlayed = false;
 
 // ms track [unsigned long]
-// Use unsigned long for deales(int can overflow after 32s, while unsigned long can keep up to 49 days)
+// Use unsigned long for delays(int can overflow after 32s, while unsigned long can keep up to 49 days)
 unsigned long LastErrorFlagMs = 0;
 unsigned long LastTonePlsyedMs = 0;
 unsigned long LastLEDMs = 0;
-unsigned long LastLockSignal = 0;
+unsigned long LastLockSignal = 1;
 
 // int
 int ToneArrayIndex = 0;
@@ -46,7 +46,7 @@ int LED = ReadyFlag;
 int LockSignalSended = 0;
 
 // setup
-void setup(){
+void setup(){ // DOC
   // LED
   pinMode(ReadyFlag, OUTPUT);
   pinMode(AButtonLED, OUTPUT);
@@ -70,7 +70,7 @@ void setup(){
   attachInterrupt(digitalPinToInterrupt(BButton), BButtonFunction, FALLING);
 
   // Uncomment the command starting with Serial
-  // Serial.begin(9600);
+  Serial.begin(9600);
 
   // check if lists match
   ToneArraySize = sizeof(ToneArray) / sizeof(ToneArray[0]);
@@ -78,25 +78,25 @@ void setup(){
 
   // Set Ready Flag on
   digitalWrite(ReadyFlag, HIGH);
+  Serial.print("R");
 }
 
 // loop
-void loop(){
-  /*
+void loop(){ // DOC
   if (Serial.available() > 0) {
     char receivedChar = Serial.read(); // Read the incoming character
 
     if (receivedChar == 'r' || receivedChar == 'R') Reset();
   }
-  */
   if(error) Error();
   else if(Locked){
+    if(LockSignalSended != 1) s();
     if(!SoundPlayed) { SoundPlay(); } else noTone(AudioOut);
     LEDToggle(LED, LastLEDMs, LEDDelay);
-    if(LockSignalSended < 2) {
+    /*if(LockSignalSended < 2) {
       LEDToggle(LockSignal, LastLockSignal, LockSignalDelay);
       LockSignalSended ++;
-    }
+    }*/
   }
 }
 
@@ -113,13 +113,13 @@ void Reset(){
   error = false;
   Locked = false;
   SoundPlayed = false;
-  LockSignalSended = 0;
+  LockSignalSended = 1;
   ToneArrayIndex = 0;
   ToneArraySize = 0;
   LED = ReadyFlag;
   ToneArraySize = sizeof(ToneArray) / sizeof(ToneArray[0]);
   if(ToneArraySize != sizeof(ToneDelayArray) / sizeof(ToneDelayArray[0])) error = true;
-  // Serial.print("R");
+  Serial.print("R");
   digitalWrite(ReadyFlag, HIGH);
 }
 
@@ -130,41 +130,60 @@ void Error(){
 }
 
 // Button Functions (IRS)
-void AButtonFunction(){
+void AButtonFunction(){ // DOC
   if(!Locked){
     Locked = true;
     LED = AButtonLED;
-    // Serial.print("A");
+    Serial.print("A");
     digitalWrite(ALEDLine, HIGH);
   }
 }
-void BButtonFunction(){
+void BButtonFunction(){ // DOC
   if(!Locked){
     Locked = true;
     LED = BButtonLED;
-    // Serial.print("B");
+    Serial.print("B");
     digitalWrite(BLEDLine, HIGH);
   }
 }
 
-// Help functions
-void SoundPlay(){
-  if(TimeOut(LastTonePlsyedMs, ToneDelayArray[ToneArrayIndex])){
+void s(){
+  Serial.println("Locked");
+  digitalWrite(LockSignal, HIGH);
+  Serial.println(digitalRead(LockSignal));
+  delay(1000);
+  digitalWrite(LockSignal, LOW);
+  Serial.println(digitalRead(LockSignal));
+  LockSignalSended = 1;
+}
+
+// Help functions for sound play
+void SoundPlay(){ // DOC
+  if(
+    TimeOut(LastTonePlsyedMs, ToneDelayArray[ToneArrayIndex])
+  ){
     if (ToneArrayIndex >= ToneArraySize - 1){ SoundPlayed = true; return; }
     tone(AudioOut, ToneArray[ToneArrayIndex]);
     ToneArrayIndex ++;
   }
 }
 
-void LEDToggle(int pin, unsigned long& LastMs, unsigned long Ms){
+//Help function for LED toggling // DOC
+void LEDToggle(int pin, unsigned long& LastMs, unsigned long Ms){ // & is use to reference tha original value, not make a copy of it
   if(TimeOut(LastMs, Ms)){
+    //Serial.println(pin);
     if(digitalRead(pin) == HIGH) digitalWrite(pin, LOW);
     else digitalWrite(pin, HIGH);
+    //Serial.println(digitalRead(pin));
+    //Serial.println(LastMs);
+    //Serial.println(Ms);
   }
 }
 
+
+// Help function for checking if the time pass
 bool TimeOut(unsigned long& LastMs, unsigned long ms){ // & is use to reference tha original value, not make a copy of it
-  bool output = (millis() - LastMs >= ms) || LastMs == 0;
+  bool output = (millis() - LastMs >= ms) || LastMs == 1;
   if(output) LastMs = millis();
   return output;
 }
